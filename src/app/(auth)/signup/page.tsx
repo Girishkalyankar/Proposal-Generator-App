@@ -2,36 +2,50 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
-import { FileText, Loader2 } from "lucide-react"
+import { FileText, Loader2, Sparkles } from "lucide-react"
 import Link from "next/link"
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const router = useRouter()
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState<string | null>(null)
 
-  async function handleSignIn(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setError("")
-    setLoading("credentials")
+    setLoading("signup")
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
 
-    if (result?.error) {
-      setError("Invalid email or password")
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || "Signup failed")
+        setLoading(null)
+        return
+      }
+
+      await signIn("credentials", {
+        email,
+        password,
+        callbackUrl: "/dashboard",
+      })
+    } catch {
+      setError("Something went wrong. Please try again.")
       setLoading(null)
-    } else {
-      window.location.href = "/dashboard"
     }
   }
 
@@ -57,9 +71,9 @@ export default function LoginPage() {
 
         <Card className="border-border/50 shadow-xl shadow-primary/5">
           <CardHeader className="text-center space-y-2 pb-4">
-            <CardTitle className="text-xl font-bold">Welcome back</CardTitle>
+            <CardTitle className="text-xl font-bold">Create your account</CardTitle>
             <CardDescription>
-              Sign in to your account
+              Start creating stunning proposals today
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -79,22 +93,32 @@ export default function LoginPage() {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
               )}
-              Continue with Google
+              Sign up with Google
             </Button>
 
             <div className="relative">
               <Separator />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground font-medium">
-                or sign in with email
+                or sign up with email
               </span>
             </div>
 
-            <form onSubmit={handleSignIn} className="space-y-3">
+            <form onSubmit={handleSignup} className="space-y-3">
               {error && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-center">
                   {error}
                 </div>
               )}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Full Name</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  className="rounded-lg h-10"
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Email</Label>
                 <Input
@@ -112,25 +136,28 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Your password"
+                  placeholder="Min. 6 characters"
                   className="rounded-lg h-10"
+                  minLength={6}
                   required
                 />
               </div>
               <Button type="submit" className="w-full rounded-lg h-10 shadow-lg shadow-primary/20" disabled={loading !== null}>
-                {loading === "credentials" ? (
+                {loading === "signup" ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Sign In
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Create Account
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-primary hover:underline">
-            Sign up
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-primary hover:underline">
+            Sign in
           </Link>
         </p>
       </div>
