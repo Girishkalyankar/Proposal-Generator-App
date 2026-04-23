@@ -2,11 +2,12 @@ import { auth } from "@/lib/auth"
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const isAuthPage = req.nextUrl.pathname.startsWith("/login")
+  const path = req.nextUrl.pathname
+  const isAuthPage = path.startsWith("/login")
   const isPublicPage =
-    req.nextUrl.pathname === "/" ||
-    req.nextUrl.pathname.startsWith("/view/") ||
-    req.nextUrl.pathname.startsWith("/api/auth")
+    path === "/" ||
+    path.startsWith("/view/") ||
+    path.startsWith("/api/auth")
 
   if (isPublicPage) return
 
@@ -23,5 +24,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ["/((?!_next|static|favicon.ico).*)"],
+  matcher: ["/((?!_next|static|favicon\\.ico|.*\\.svg$|.*\\.png$|.*\\.jpg$|api/ai).*)"],
 }

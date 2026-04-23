@@ -164,6 +164,7 @@ export function DashboardContent({
               accepted={stats.accepted}
               declined={stats.declined}
               sent={stats.sent}
+              viewed={stats.viewed}
               draft={stats.draft}
             />
           </CardContent>

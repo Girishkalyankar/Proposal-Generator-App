@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { RichTextSection } from "./section-types/rich-text-section"
-import { PricingSection } from "./section-types/pricing-section"
-import { CoverSection } from "./section-types/cover-section"
-import { TimelineSection } from "./section-types/timeline-section"
-import { TeamSection } from "./section-types/team-section"
+import dynamic from "next/dynamic"
+
+const RichTextSection = dynamic(() => import("./section-types/rich-text-section").then((m) => m.RichTextSection), { ssr: false })
+const PricingSection = dynamic(() => import("./section-types/pricing-section").then((m) => m.PricingSection), { ssr: false })
+const CoverSection = dynamic(() => import("./section-types/cover-section").then((m) => m.CoverSection), { ssr: false })
+const TimelineSection = dynamic(() => import("./section-types/timeline-section").then((m) => m.TimelineSection), { ssr: false })
+const TeamSection = dynamic(() => import("./section-types/team-section").then((m) => m.TeamSection), { ssr: false })
 
 interface Section {
   id: string

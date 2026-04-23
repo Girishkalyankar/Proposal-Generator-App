@@ -6,22 +6,43 @@ export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user?.id) return null
 
-  const proposals = await prisma.proposal.findMany({
-    where: { userId: session.user.id },
-    orderBy: { updatedAt: "desc" },
-    include: { sections: { orderBy: { order: "asc" } } },
+  const [proposals, counts] = await Promise.all([
+    prisma.proposal.findMany({
+      where: { userId: session.user.id },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        clientName: true,
+        status: true,
+        totalValue: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.proposal.groupBy({
+      by: ["status"],
+      where: { userId: session.user.id },
+      _count: true,
+    }),
+  ])
+
+  const countMap: Record<string, number> = {}
+  for (const c of counts) countMap[c.status] = c._count
+
+  const totalValue = await prisma.proposal.aggregate({
+    where: { userId: session.user.id, status: "ACCEPTED" },
+    _sum: { totalValue: true },
   })
 
   const stats = {
-    total: proposals.length,
-    draft: proposals.filter((p) => p.status === "DRAFT").length,
-    sent: proposals.filter((p) => p.status === "SENT").length,
-    viewed: proposals.filter((p) => p.status === "VIEWED").length,
-    accepted: proposals.filter((p) => p.status === "ACCEPTED").length,
-    declined: proposals.filter((p) => p.status === "DECLINED").length,
-    totalValue: proposals
-      .filter((p) => p.status === "ACCEPTED")
-      .reduce((sum, p) => sum + Number(p.totalValue || 0), 0),
+    total: Object.values(countMap).reduce((a, b) => a + b, 0),
+    draft: countMap["DRAFT"] || 0,
+    sent: countMap["SENT"] || 0,
+    viewed: countMap["VIEWED"] || 0,
+    accepted: countMap["ACCEPTED"] || 0,
+    declined: countMap["DECLINED"] || 0,
+    totalValue: Number(totalValue._sum.totalValue || 0),
   }
 
   const winRate =

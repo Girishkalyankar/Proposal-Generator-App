@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
@@ -27,6 +28,8 @@ export function RichTextSection({
   content: string
   onChange: (html: string) => void
 }) {
+  const lastExternalContent = useRef(content)
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -35,7 +38,9 @@ export function RichTextSection({
     ],
     content,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      const html = editor.getHTML()
+      lastExternalContent.current = html
+      onChange(html)
     },
     editorProps: {
       attributes: {
@@ -44,6 +49,13 @@ export function RichTextSection({
       },
     },
   })
+
+  useEffect(() => {
+    if (editor && content !== lastExternalContent.current) {
+      lastExternalContent.current = content
+      editor.commands.setContent(content)
+    }
+  }, [content, editor])
 
   if (!editor) return null
 
