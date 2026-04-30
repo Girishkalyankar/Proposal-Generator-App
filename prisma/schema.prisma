@@ -8,18 +8,34 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String?
-  email         String      @unique
+  email         String       @unique
   password      String?
   emailVerified DateTime?
   image         String?
+  isActivated   Boolean      @default(false)
+  isAdmin       Boolean      @default(false)
   accounts      Account[]
   sessions      Session[]
   proposals     Proposal[]
   templates     Template[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  accessCode    AccessCode?  @relation("UsedBy")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model AccessCode {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  label      String?
+  isUsed     Boolean   @default(false)
+  usedById   String?   @unique
+  usedBy     User?     @relation("UsedBy", fields: [usedById], references: [id])
+  usedAt     DateTime?
+  revoked    Boolean   @default(false)
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 }
 
 model Account {
@@ -57,20 +73,23 @@ model VerificationToken {
 }
 
 model Proposal {
-  id          String            @id @default(cuid())
-  title       String
-  clientName  String?
-  clientEmail String?
-  status      ProposalStatus    @default(DRAFT)
-  shareToken  String?           @unique @default(cuid())
-  userId      String
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sections    ProposalSection[]
-  viewedAt    DateTime?
-  sentAt      DateTime?
-  totalValue  Decimal?          @db.Decimal(12, 2)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id            String            @id @default(cuid())
+  title         String
+  clientName    String?
+  clientEmail   String?
+  status        ProposalStatus    @default(DRAFT)
+  shareToken    String?           @unique @default(uuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections      ProposalSection[]
+  viewedAt      DateTime?
+  sentAt        DateTime?
+  totalValue    Decimal?          @db.Decimal(12, 2)
+  deletedAt     DateTime?
+  lastEditedBy  String?
+  lastEditedAt  DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   @@index([userId])
 }
@@ -106,6 +125,7 @@ enum SectionType {
   TIMELINE
   TEAM
   TERMS
+  CONTACT
   CUSTOM
 }
 

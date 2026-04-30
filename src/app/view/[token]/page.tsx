@@ -11,10 +11,10 @@ export default async function ViewProposalPage({
 
   const proposal = await prisma.proposal.findUnique({
     where: { shareToken: token },
-    include: { sections: { orderBy: { order: "asc" } }, user: { select: { name: true, email: true } } },
+    include: { sections: { orderBy: { order: "asc" } }, user: { select: { name: true } } },
   })
 
-  if (!proposal) notFound()
+  if (!proposal || proposal.deletedAt) notFound()
 
   if (proposal.status === "SENT") {
     await prisma.proposal.update({

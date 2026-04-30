@@ -64,20 +64,22 @@ export function ProposalsList({ proposals: initial }: { proposals: Proposal[] })
   })
 
   async function deleteProposal(id: string) {
-    if (!confirm("Delete this proposal?")) return
+    if (!confirm("Are you sure you want to delete this proposal?\n\nDon't worry — it can be recovered by the admin if needed.")) return
     await fetch(`/api/proposals/${id}`, { method: "DELETE" })
-    toast.success("Proposal deleted")
+    toast.success("Proposal moved to trash")
     router.refresh()
   }
 
   async function duplicateProposal(id: string) {
     const res = await fetch(`/api/proposals/${id}`)
+    if (!res.ok) { toast.error("Failed to load proposal"); return }
     const original = await res.json()
     const newRes = await fetch("/api/proposals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: `${original.title} (Copy)`, clientName: original.clientName }),
+      body: JSON.stringify({ title: `${original.title} (Copy)`, clientName: original.clientName, duplicateId: id }),
     })
+    if (!newRes.ok) { toast.error("Failed to duplicate"); return }
     const created = await newRes.json()
     toast.success("Proposal duplicated")
     router.push(`/proposals/${created.id}/edit`)

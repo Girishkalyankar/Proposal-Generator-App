@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import DOMPurify from "isomorphic-dompurify"
 import { Sparkles, Loader2, ArrowDown, ArrowUp, RotateCcw, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -209,7 +210,7 @@ export function AiToolbar({
                 </div>
                 <div
                   className="prose prose-sm dark:prose-invert max-h-[200px] overflow-y-auto rounded-md border p-2 text-sm"
-                  dangerouslySetInnerHTML={{ __html: preview }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview) }}
                 />
                 <Button size="sm" onClick={applyContent} className="w-full">
                   Apply to Section

@@ -9,6 +9,7 @@ import {
   FolderOpen,
   Settings,
   Sparkles,
+  KeyRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Proposals", href: "/proposals", icon: FileText },
   { name: "Templates", href: "/templates", icon: FolderOpen },
+  { name: "Access Codes", href: "/admin/codes", icon: KeyRound },
 ]
 
 export function Sidebar() {
@@ -29,7 +31,7 @@ export function Sidebar() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/25">
             <FileText className="h-4 w-4" />
           </div>
-          <span className="text-lg tracking-tight">ProposalForge</span>
+          <span className="text-lg tracking-tight">Propify.ai</span>
         </Link>
       </div>
 

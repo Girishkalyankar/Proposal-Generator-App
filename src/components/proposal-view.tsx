@@ -1,5 +1,6 @@
 "use client"
 
+import DOMPurify from "isomorphic-dompurify"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +13,7 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table"
-import { CheckCircle2, XCircle } from "lucide-react"
+import { CheckCircle2, XCircle, Mail, Phone, MapPin, Globe, AtSign, Camera } from "lucide-react"
 import { toast } from "sonner"
 
 interface Section {
@@ -181,6 +182,59 @@ export function ProposalView({ proposal }: { proposal: Proposal }) {
           )
         }
 
+        if (section.type === "CONTACT") {
+          return (
+            <Card key={section.id} className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Camera className="h-5 w-5" />
+                  {section.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {content.studioName && (
+                  <p className="text-lg font-semibold mb-3">{content.studioName as string}</p>
+                )}
+                {content.services && (
+                  <p className="text-sm text-muted-foreground mb-4">{content.services as string}</p>
+                )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {content.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-primary" />
+                      <span>{content.email as string}</span>
+                    </div>
+                  )}
+                  {content.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-primary" />
+                      <span>{content.phone as string}</span>
+                    </div>
+                  )}
+                  {content.website && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Globe className="h-4 w-4 text-primary" />
+                      <span>{content.website as string}</span>
+                    </div>
+                  )}
+                  {content.instagram && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <AtSign className="h-4 w-4 text-primary" />
+                      <span>{content.instagram as string}</span>
+                    </div>
+                  )}
+                </div>
+                {content.address && (
+                  <div className="flex items-start gap-2 text-sm mt-3">
+                    <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                    <span>{content.address as string}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        }
+
         return (
           <Card key={section.id} className="mb-6">
             <CardHeader>
@@ -189,7 +243,7 @@ export function ProposalView({ proposal }: { proposal: Proposal }) {
             <CardContent>
               <div
                 className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: (content.html as string) || "" }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize((content.html as string) || "") }}
               />
             </CardContent>
           </Card>

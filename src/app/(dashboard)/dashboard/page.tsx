@@ -1,14 +1,17 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getOwnerFilter } from "@/lib/admin-filter"
 import { DashboardContent } from "@/components/dashboard/dashboard-content"
 
 export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user?.id) return null
 
+  const ownerFilter = await getOwnerFilter(session.user.id)
+
   const [proposals, counts] = await Promise.all([
     prisma.proposal.findMany({
-      where: { userId: session.user.id },
+      where: { ...ownerFilter, deletedAt: null },
       orderBy: { updatedAt: "desc" },
       take: 10,
       select: {
@@ -22,7 +25,7 @@ export default async function DashboardPage() {
     }),
     prisma.proposal.groupBy({
       by: ["status"],
-      where: { userId: session.user.id },
+      where: { ...ownerFilter, deletedAt: null },
       _count: true,
     }),
   ])
@@ -31,7 +34,7 @@ export default async function DashboardPage() {
   for (const c of counts) countMap[c.status] = c._count
 
   const totalValue = await prisma.proposal.aggregate({
-    where: { userId: session.user.id, status: "ACCEPTED" },
+    where: { ...ownerFilter, status: "ACCEPTED", deletedAt: null },
     _sum: { totalValue: true },
   })
 

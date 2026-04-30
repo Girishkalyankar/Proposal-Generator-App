@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isUserActivated } from "@/lib/admin-filter"
 
 export async function DELETE(
   _req: NextRequest,
@@ -10,6 +11,9 @@ export async function DELETE(
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  if (!(await isUserActivated(session.user.id))) {
+    return NextResponse.json({ error: "Account not activated" }, { status: 403 })
   }
 
   const template = await prisma.template.findFirst({

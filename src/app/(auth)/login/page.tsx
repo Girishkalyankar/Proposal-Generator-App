@@ -52,7 +52,7 @@ export default function LoginPage() {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/25">
             <FileText className="h-5 w-5" />
           </div>
-          <span className="text-2xl font-bold tracking-tight">ProposalForge</span>
+          <span className="text-2xl font-bold tracking-tight">Propify.ai</span>
         </Link>
 
         <Card className="border-border/50 shadow-xl shadow-primary/5">

@@ -1,9 +1,299 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getOwnerFilter, isUserActivated } from "@/lib/admin-filter"
+import React from "react"
+import { renderToBuffer, Document, Page, Text, View, Font } from "@react-pdf/renderer"
+import { pdfDesigns, type PdfDesign } from "@/lib/pdf-designs"
+
+Font.register({
+  family: "Inter",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf", fontWeight: 400 },
+    { src: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZhrib2Bg-4.ttf", fontWeight: 600 },
+    { src: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZhrib2Bg-4.ttf", fontWeight: 700 },
+  ],
+})
+
+function fmt(n: number, currency = "INR") {
+  const symbol = currency === "USD" ? "$" : "₹"
+  return `${symbol}${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<\/h[1-6]>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
+function makeStyles(c: PdfDesign["colors"]) {
+  return {
+    page: { fontFamily: "Inter" as const, fontSize: 11, color: c.text, padding: 40, lineHeight: 1.6 },
+    coverPage: { fontFamily: "Inter" as const, backgroundColor: c.coverBg, padding: 60, justifyContent: "center" as const, alignItems: "center" as const, minHeight: "100%" as const },
+    coverBadge: { backgroundColor: c.accent, color: c.white, fontSize: 9, fontWeight: 700 as const, letterSpacing: 3, paddingVertical: 5, paddingHorizontal: 18, borderRadius: 14, marginBottom: 28 },
+    coverTitle: { fontSize: 30, fontWeight: 700 as const, color: c.coverText, textAlign: "center" as const, marginBottom: 20, lineHeight: 1.3 },
+    coverDivider: { width: 50, height: 3, backgroundColor: c.accent, marginBottom: 20, borderRadius: 2 },
+    coverClient: { fontSize: 14, color: c.coverText, opacity: 0.85, textAlign: "center" as const, marginBottom: 6 },
+    coverClientBold: { fontWeight: 700 as const, color: c.coverText },
+    coverDate: { fontSize: 11, color: c.coverText, opacity: 0.6, textAlign: "center" as const },
+    coverCompany: { marginTop: 36, paddingTop: 20, borderTopWidth: 1, borderTopColor: c.coverText + "26", alignItems: "center" as const },
+    coverCompanyLabel: { fontSize: 9, color: c.coverText, opacity: 0.5, letterSpacing: 2, marginBottom: 4 },
+    coverCompanyName: { fontSize: 14, color: c.coverText, fontWeight: 600 as const },
+    sectionHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12, marginBottom: 16, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: c.primary },
+    sectionNumber: { fontSize: 10, fontWeight: 700 as const, color: c.accent, backgroundColor: c.accentLight, width: 28, height: 28, borderRadius: 14, textAlign: "center" as const, lineHeight: 28 },
+    sectionTitle: { fontSize: 18, fontWeight: 700 as const, color: c.primary },
+    sectionBody: { marginBottom: 30 },
+    bodyText: { fontSize: 11, color: c.text, lineHeight: 1.7, marginBottom: 8 },
+    tableHeader: { flexDirection: "row" as const, backgroundColor: c.primary, padding: 10 },
+    tableHeaderCell: { color: c.white, fontSize: 9, fontWeight: 600 as const, letterSpacing: 0.5 },
+    tableRow: { flexDirection: "row" as const, padding: 10, borderBottomWidth: 1, borderBottomColor: c.border },
+    tableRowEven: { backgroundColor: c.white },
+    tableRowOdd: { backgroundColor: c.bgSubtle },
+    tableCell: { fontSize: 10 },
+    tableCellDesc: { fontSize: 9, color: c.textSecondary, marginTop: 2 },
+    summaryContainer: { alignItems: "flex-end" as const, marginTop: 12 },
+    summaryBox: { width: 220 },
+    summaryRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, paddingVertical: 6, paddingHorizontal: 12 },
+    summaryLabel: { fontSize: 10, color: c.textSecondary },
+    summaryValue: { fontSize: 10, color: c.textSecondary },
+    summaryDiscount: { color: c.success },
+    summaryTotal: { flexDirection: "row" as const, justifyContent: "space-between" as const, backgroundColor: c.primary, borderRadius: 6, paddingVertical: 10, paddingHorizontal: 12, marginTop: 6 },
+    summaryTotalLabel: { fontSize: 13, fontWeight: 700 as const, color: c.white },
+    summaryTotalValue: { fontSize: 13, fontWeight: 700 as const, color: c.white },
+    teamGrid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 12 },
+    teamCard: { flexDirection: "row" as const, gap: 10, padding: 12, borderWidth: 1, borderColor: c.border, borderRadius: 8, backgroundColor: c.bgSubtle, width: "48%" },
+    teamAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.primary, justifyContent: "center" as const, alignItems: "center" as const },
+    teamAvatarText: { color: c.white, fontWeight: 700 as const, fontSize: 14 },
+    teamName: { fontWeight: 600 as const, fontSize: 11, color: c.primary },
+    teamRole: { fontSize: 9, color: c.accent, fontWeight: 600 as const, marginTop: 1 },
+    teamBio: { fontSize: 9, color: c.textSecondary, marginTop: 4, lineHeight: 1.4 },
+    timelineItem: { flexDirection: "row" as const, marginBottom: 16 },
+    timelineDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.accent, marginRight: 12, marginTop: 3 },
+    timelineDotLast: { backgroundColor: c.success },
+    timelinePhase: { fontWeight: 600 as const, fontSize: 12, color: c.primary },
+    timelineDuration: { fontSize: 9, color: c.accent, fontWeight: 600 as const, marginTop: 1 },
+    timelineDesc: { fontSize: 10, color: c.textSecondary, marginTop: 4 },
+    footer: { marginTop: 40, paddingTop: 14, borderTopWidth: 1, borderTopColor: c.border, textAlign: "center" as const },
+    footerText: { fontSize: 9, color: c.textSecondary, textAlign: "center" as const },
+  }
+}
+
+interface ProposalData {
+  title: string
+  clientName: string | null
+  sections: { type: string; title: string; content: unknown }[]
+}
+
+function ProposalPdf({ proposal, design }: { proposal: ProposalData; design: PdfDesign }) {
+  const c = design.colors
+  const s = makeStyles(c)
+  const dateStr = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })
+
+  const pages = proposal.sections.map((section, idx) => {
+    const content = section.content as Record<string, unknown>
+
+    if (section.type === "COVER") {
+      return React.createElement(Page, { key: idx, size: "A4", style: s.coverPage },
+        React.createElement(View, { style: { alignItems: "center" } },
+          React.createElement(Text, { style: s.coverBadge }, "PROPOSAL"),
+          React.createElement(Text, { style: s.coverTitle }, (content.projectTitle as string) || proposal.title),
+          React.createElement(View, { style: s.coverDivider }),
+          React.createElement(Text, { style: s.coverClient },
+            "Prepared for ",
+            React.createElement(Text, { style: s.coverClientBold }, (content.clientName as string) || proposal.clientName || "Client")
+          ),
+          React.createElement(Text, { style: s.coverDate }, (content.date as string) || dateStr),
+          content.companyName
+            ? React.createElement(View, { style: s.coverCompany },
+                React.createElement(Text, { style: s.coverCompanyLabel }, "PRESENTED BY"),
+                React.createElement(Text, { style: s.coverCompanyName }, content.companyName as string)
+              )
+            : null
+        )
+      )
+    }
+
+    if (section.type === "PRICING") {
+      const items = ((content.items || []) as { name: string; description: string; qty: number; unitPrice: number }[])
+      const cur = (content.currency as string) || "INR"
+      const discount = (content.discount as number) || 0
+      const taxRate = (content.taxRate as number) || 0
+      const subtotal = items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0)
+      const discountAmt = subtotal * (discount / 100)
+      const afterDiscount = subtotal - discountAmt
+      const taxAmt = afterDiscount * (taxRate / 100)
+      const total = afterDiscount + taxAmt
+
+      return React.createElement(Page, { key: idx, size: "A4", style: s.page },
+        React.createElement(View, { style: s.sectionHeader },
+          React.createElement(Text, { style: s.sectionNumber }, String(idx + 1).padStart(2, "0")),
+          React.createElement(Text, { style: s.sectionTitle }, section.title)
+        ),
+        React.createElement(View, { style: { marginBottom: 4 } },
+          React.createElement(View, { style: s.tableHeader },
+            React.createElement(Text, { style: [s.tableHeaderCell, { width: "45%" }] }, "ITEM"),
+            React.createElement(Text, { style: [s.tableHeaderCell, { width: "10%", textAlign: "center" }] }, "QTY"),
+            React.createElement(Text, { style: [s.tableHeaderCell, { width: "20%", textAlign: "right" }] }, "UNIT PRICE"),
+            React.createElement(Text, { style: [s.tableHeaderCell, { width: "25%", textAlign: "right" }] }, "AMOUNT")
+          ),
+          ...items.map((item, j) =>
+            React.createElement(View, { key: j, style: [s.tableRow, j % 2 === 0 ? s.tableRowEven : s.tableRowOdd] },
+              React.createElement(View, { style: { width: "45%" } },
+                React.createElement(Text, { style: [s.tableCell, { fontWeight: 600 }] }, item.name),
+                item.description ? React.createElement(Text, { style: s.tableCellDesc }, item.description) : null
+              ),
+              React.createElement(Text, { style: [s.tableCell, { width: "10%", textAlign: "center" }] }, String(item.qty)),
+              React.createElement(Text, { style: [s.tableCell, { width: "20%", textAlign: "right" }] }, fmt(item.unitPrice, cur)),
+              React.createElement(Text, { style: [s.tableCell, { width: "25%", textAlign: "right" }] }, fmt(item.qty * item.unitPrice, cur))
+            )
+          )
+        ),
+        React.createElement(View, { style: s.summaryContainer },
+          React.createElement(View, { style: s.summaryBox },
+            React.createElement(View, { style: s.summaryRow },
+              React.createElement(Text, { style: s.summaryLabel }, "Subtotal"),
+              React.createElement(Text, { style: s.summaryValue }, fmt(subtotal, cur))
+            ),
+            discount > 0 ? React.createElement(View, { style: s.summaryRow },
+              React.createElement(Text, { style: [s.summaryLabel, s.summaryDiscount] }, `Discount (${discount}%)`),
+              React.createElement(Text, { style: [s.summaryValue, s.summaryDiscount] }, `-${fmt(discountAmt, cur)}`)
+            ) : null,
+            taxRate > 0 ? React.createElement(View, { style: s.summaryRow },
+              React.createElement(Text, { style: s.summaryLabel }, `Tax (${taxRate}%)`),
+              React.createElement(Text, { style: s.summaryValue }, fmt(taxAmt, cur))
+            ) : null,
+            React.createElement(View, { style: s.summaryTotal },
+              React.createElement(Text, { style: s.summaryTotalLabel }, "Total"),
+              React.createElement(Text, { style: s.summaryTotalValue }, fmt(total, cur))
+            )
+          )
+        )
+      )
+    }
+
+    if (section.type === "TEAM") {
+      const members = ((content.members || []) as { name: string; role: string; bio: string }[])
+      if (members.length === 0) return null
+      return React.createElement(Page, { key: idx, size: "A4", style: s.page },
+        React.createElement(View, { style: s.sectionHeader },
+          React.createElement(Text, { style: s.sectionNumber }, String(idx + 1).padStart(2, "0")),
+          React.createElement(Text, { style: s.sectionTitle }, section.title)
+        ),
+        React.createElement(View, { style: s.teamGrid },
+          ...members.map((m, j) =>
+            React.createElement(View, { key: j, style: s.teamCard },
+              React.createElement(View, { style: s.teamAvatar },
+                React.createElement(Text, { style: s.teamAvatarText }, (m.name || "?")[0].toUpperCase())
+              ),
+              React.createElement(View, { style: { flex: 1 } },
+                React.createElement(Text, { style: s.teamName }, m.name),
+                React.createElement(Text, { style: s.teamRole }, m.role),
+                m.bio ? React.createElement(Text, { style: s.teamBio }, m.bio) : null
+              )
+            )
+          )
+        )
+      )
+    }
+
+    if (section.type === "TIMELINE") {
+      const items = ((content.items || []) as { phase: string; duration: string; description: string }[])
+      const htmlContent = stripHtml((content.html as string) || "")
+      if (items.length === 0 && !htmlContent) return null
+
+      return React.createElement(Page, { key: idx, size: "A4", style: s.page },
+        React.createElement(View, { style: s.sectionHeader },
+          React.createElement(Text, { style: s.sectionNumber }, String(idx + 1).padStart(2, "0")),
+          React.createElement(Text, { style: s.sectionTitle }, section.title)
+        ),
+        items.length > 0
+          ? React.createElement(View, {},
+              ...items.map((item, j) =>
+                React.createElement(View, { key: j, style: s.timelineItem },
+                  React.createElement(View, { style: [s.timelineDot, j === items.length - 1 ? s.timelineDotLast : {}] }),
+                  React.createElement(View, { style: { flex: 1 } },
+                    React.createElement(Text, { style: s.timelinePhase }, item.phase),
+                    React.createElement(Text, { style: s.timelineDuration }, item.duration),
+                    item.description ? React.createElement(Text, { style: s.timelineDesc }, item.description) : null
+                  )
+                )
+              )
+            )
+          : React.createElement(Text, { style: s.bodyText }, htmlContent)
+      )
+    }
+
+    if (section.type === "CONTACT") {
+      const contactRow = (label: string, value: string) =>
+        React.createElement(View, { style: { flexDirection: "row" as const, marginBottom: 8 } },
+          React.createElement(Text, { style: { fontSize: 10, fontWeight: 600, color: c.primary, width: 80 } }, label),
+          React.createElement(Text, { style: { fontSize: 10, color: c.text, flex: 1 } }, value)
+        )
+
+      return React.createElement(Page, { key: idx, size: "A4", style: s.page },
+        React.createElement(View, { style: s.sectionHeader },
+          React.createElement(Text, { style: s.sectionNumber }, String(idx + 1).padStart(2, "0")),
+          React.createElement(Text, { style: s.sectionTitle }, section.title)
+        ),
+        React.createElement(View, {
+          style: { padding: 20, borderWidth: 1, borderColor: c.border, borderRadius: 8, backgroundColor: c.bgSubtle }
+        },
+          content.studioName ? React.createElement(Text, { style: { fontSize: 16, fontWeight: 700, color: c.primary, marginBottom: 4 } }, content.studioName as string) : null,
+          content.services ? React.createElement(Text, { style: { fontSize: 10, color: c.textSecondary, marginBottom: 16 } }, content.services as string) : null,
+          content.email ? contactRow("Email", content.email as string) : null,
+          content.phone ? contactRow("Phone", content.phone as string) : null,
+          content.website ? contactRow("Website", content.website as string) : null,
+          content.instagram ? contactRow("Instagram", content.instagram as string) : null,
+          content.address ? React.createElement(View, { style: { flexDirection: "row" as const, marginTop: 4 } },
+            React.createElement(Text, { style: { fontSize: 10, fontWeight: 600, color: c.primary, width: 80 } }, "Address"),
+            React.createElement(Text, { style: { fontSize: 10, color: c.text, flex: 1 } }, content.address as string)
+          ) : null
+        )
+      )
+    }
+
+    const textContent = stripHtml((content.html as string) || "")
+    if (!textContent) return null
+
+    return React.createElement(Page, { key: idx, size: "A4", style: s.page },
+      React.createElement(View, { style: s.sectionHeader },
+        React.createElement(Text, { style: s.sectionNumber }, String(idx + 1).padStart(2, "0")),
+        React.createElement(Text, { style: s.sectionTitle }, section.title)
+      ),
+      React.createElement(View, { style: s.sectionBody },
+        ...textContent.split("\n\n").filter(Boolean).map((para, j) =>
+          React.createElement(Text, { key: j, style: s.bodyText }, para.trim())
+        )
+      )
+    )
+  }).filter(Boolean)
+
+  return React.createElement(Document, {},
+    ...pages,
+    React.createElement(Page, { size: "A4", style: s.page },
+      React.createElement(View, { style: s.footer },
+        React.createElement(Text, { style: s.footerText },
+          `Generated with Propify.ai · ${dateStr}`
+        )
+      )
+    )
+  )
+}
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
@@ -11,9 +301,13 @@ export async function GET(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!(await isUserActivated(session.user.id))) {
+    return NextResponse.json({ error: "Account not activated" }, { status: 403 })
+  }
 
+  const ownerFilter = await getOwnerFilter(session.user.id)
   const proposal = await prisma.proposal.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, ...ownerFilter, deletedAt: null },
     include: { sections: { orderBy: { order: "asc" } } },
   })
 
@@ -21,424 +315,18 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  const html = buildPdfHtml(proposal)
+  const designId = req.nextUrl.searchParams.get("design") || "corporate-blue"
+  const design = pdfDesigns.find((d) => d.id === designId) || pdfDesigns[0]
 
-  return new NextResponse(html, {
+  const buffer = await renderToBuffer(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    React.createElement(ProposalPdf, { proposal, design }) as any
+  )
+
+  return new NextResponse(Buffer.from(buffer) as unknown as BodyInit, {
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${proposal.title.replace(/[^a-zA-Z0-9 ]/g, "")}.pdf"`,
     },
   })
-}
-
-function fmt(n: number, currency = "INR") {
-  const symbol = currency === "USD" ? "$" : "₹"
-  const locale = currency === "USD" ? "en-US" : "en-IN"
-  return `${symbol}${n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-function buildPdfHtml(proposal: {
-  title: string
-  clientName: string | null
-  sections: { type: string; title: string; content: unknown }[]
-}) {
-  const sectionHtml = proposal.sections
-    .map((section, idx) => {
-      const content = section.content as Record<string, unknown>
-
-      if (section.type === "COVER") {
-        return `
-          <div class="cover-page">
-            <div class="cover-accent"></div>
-            <div class="cover-content">
-              <div class="cover-badge">PROPOSAL</div>
-              <h1 class="cover-title">${content.projectTitle || proposal.title}</h1>
-              <div class="cover-divider"></div>
-              <p class="cover-client">Prepared for <strong>${content.clientName || proposal.clientName || "Client"}</strong></p>
-              <p class="cover-date">${content.date || new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</p>
-              ${content.companyName ? `<div class="cover-company"><span class="cover-company-label">Presented by</span><span class="cover-company-name">${content.companyName}</span></div>` : ""}
-            </div>
-          </div>`
-      }
-
-      if (section.type === "PRICING") {
-        const items = (content.items || []) as { name: string; description: string; qty: number; unitPrice: number }[]
-        const cur = (content.currency as string) || "INR"
-        const discount = (content.discount as number) || 0
-        const taxRate = (content.taxRate as number) || 0
-        const subtotal = items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
-        const discountAmount = subtotal * (discount / 100)
-        const afterDiscount = subtotal - discountAmount
-        const taxAmount = afterDiscount * (taxRate / 100)
-        const total = afterDiscount + taxAmount
-        return `
-          <div class="section">
-            <div class="section-header">
-              <span class="section-number">${String(idx + 1).padStart(2, "0")}</span>
-              <h2 class="section-title">${section.title}</h2>
-            </div>
-            <table class="pricing-table">
-              <thead>
-                <tr>
-                  <th style="text-align:left;width:45%;">Item</th>
-                  <th style="text-align:center;width:10%;">Qty</th>
-                  <th style="text-align:right;width:20%;">Unit Price</th>
-                  <th style="text-align:right;width:25%;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${items.map((i, j) => `
-                  <tr class="${j % 2 === 0 ? "row-even" : "row-odd"}">
-                    <td style="text-align:left;"><strong>${i.name}</strong>${i.description ? `<br/><span class="item-desc">${i.description}</span>` : ""}</td>
-                    <td style="text-align:center;">${i.qty}</td>
-                    <td style="text-align:right;">${fmt(i.unitPrice, cur)}</td>
-                    <td style="text-align:right;">${fmt(i.qty * i.unitPrice, cur)}</td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
-            <div class="pricing-summary">
-              <div class="summary-row"><span>Subtotal</span><span>${fmt(subtotal, cur)}</span></div>
-              ${discount > 0 ? `<div class="summary-row discount"><span>Discount (${discount}%)</span><span>-${fmt(discountAmount, cur)}</span></div>` : ""}
-              ${taxRate > 0 ? `<div class="summary-row"><span>Tax (${taxRate}%)</span><span>${fmt(taxAmount, cur)}</span></div>` : ""}
-              <div class="summary-row total"><span>Total</span><span>${fmt(total, cur)}</span></div>
-            </div>
-          </div>`
-      }
-
-      if (section.type === "TEAM") {
-        const members = (content.members || []) as { name: string; role: string; bio: string }[]
-        if (members.length === 0) return ""
-        return `
-          <div class="section">
-            <div class="section-header">
-              <span class="section-number">${String(idx + 1).padStart(2, "0")}</span>
-              <h2 class="section-title">${section.title}</h2>
-            </div>
-            <div class="team-grid">
-              ${members.map((m) => `
-                <div class="team-card">
-                  <div class="team-avatar">${(m.name || "?")[0].toUpperCase()}</div>
-                  <div class="team-info">
-                    <div class="team-name">${m.name}</div>
-                    <div class="team-role">${m.role}</div>
-                    ${m.bio ? `<div class="team-bio">${m.bio}</div>` : ""}
-                  </div>
-                </div>
-              `).join("")}
-            </div>
-          </div>`
-      }
-
-      if (section.type === "TIMELINE") {
-        const items = (content.items || []) as { phase: string; duration: string; description: string }[]
-        if (items.length === 0) {
-          return `
-            <div class="section">
-              <div class="section-header">
-                <span class="section-number">${String(idx + 1).padStart(2, "0")}</span>
-                <h2 class="section-title">${section.title}</h2>
-              </div>
-              <div class="body-content">${(content.html as string) || ""}</div>
-            </div>`
-        }
-        return `
-          <div class="section">
-            <div class="section-header">
-              <span class="section-number">${String(idx + 1).padStart(2, "0")}</span>
-              <h2 class="section-title">${section.title}</h2>
-            </div>
-            <div class="timeline">
-              ${items.map((item, j) => `
-                <div class="timeline-item">
-                  <div class="timeline-dot ${j === items.length - 1 ? "last" : ""}"></div>
-                  <div class="timeline-content">
-                    <div class="timeline-phase">${item.phase}</div>
-                    <div class="timeline-duration">${item.duration}</div>
-                    ${item.description ? `<div class="timeline-desc">${item.description}</div>` : ""}
-                  </div>
-                </div>
-              `).join("")}
-            </div>
-          </div>`
-      }
-
-      return `
-        <div class="section">
-          <div class="section-header">
-            <span class="section-number">${String(idx + 1).padStart(2, "0")}</span>
-            <h2 class="section-title">${section.title}</h2>
-          </div>
-          <div class="body-content">${(content.html as string) || ""}</div>
-        </div>`
-    })
-    .join("")
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>${proposal.title}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    :root {
-      --primary: #1e3a5f;
-      --primary-light: #2a5a8f;
-      --accent: #0ea5e9;
-      --accent-light: #e0f2fe;
-      --text: #1a1a2e;
-      --text-secondary: #64748b;
-      --border: #e2e8f0;
-      --bg-subtle: #f8fafc;
-      --success: #10b981;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      max-width: 850px;
-      margin: 0 auto;
-      padding: 0;
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.7;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    /* Cover Page */
-    .cover-page {
-      position: relative;
-      min-height: 500px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 80px 40px;
-      margin-bottom: 20px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .cover-accent {
-      position: absolute;
-      top: -60px;
-      right: -60px;
-      width: 300px;
-      height: 300px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 50%;
-    }
-    .cover-content { text-align: center; position: relative; z-index: 1; }
-    .cover-badge {
-      display: inline-block;
-      background: var(--accent);
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      padding: 6px 20px;
-      border-radius: 20px;
-      margin-bottom: 32px;
-    }
-    .cover-title {
-      font-size: 36px;
-      font-weight: 700;
-      color: #ffffff;
-      line-height: 1.2;
-      margin-bottom: 24px;
-    }
-    .cover-divider {
-      width: 60px;
-      height: 3px;
-      background: var(--accent);
-      margin: 0 auto 24px;
-      border-radius: 2px;
-    }
-    .cover-client { font-size: 17px; color: rgba(255,255,255,0.85); margin-bottom: 8px; }
-    .cover-client strong { color: #ffffff; }
-    .cover-date { font-size: 14px; color: rgba(255,255,255,0.6); }
-    .cover-company { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.15); }
-    .cover-company-label { display: block; font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
-    .cover-company-name { display: block; font-size: 16px; color: #ffffff; font-weight: 600; }
-
-    /* Sections */
-    .section {
-      margin-top: 40px;
-      page-break-inside: avoid;
-    }
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 20px;
-      padding-bottom: 14px;
-      border-bottom: 2px solid var(--primary);
-    }
-    .section-number {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--accent);
-      background: var(--accent-light);
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .section-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--primary);
-      letter-spacing: -0.3px;
-    }
-
-    /* Body content */
-    .body-content { color: var(--text); }
-    .body-content p { margin-bottom: 14px; }
-    .body-content h3 { font-size: 16px; font-weight: 600; color: var(--primary); margin: 20px 0 10px; }
-    .body-content ul, .body-content ol { margin: 10px 0 14px 24px; }
-    .body-content li { margin-bottom: 6px; }
-    .body-content strong { color: var(--primary); }
-
-    /* Pricing Table */
-    .pricing-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 0;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .pricing-table thead tr {
-      background: var(--primary);
-      color: #fff;
-    }
-    .pricing-table th {
-      padding: 12px 16px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .pricing-table td {
-      padding: 12px 16px;
-      font-size: 13px;
-      border-bottom: 1px solid var(--border);
-    }
-    .row-even { background: #fff; }
-    .row-odd { background: var(--bg-subtle); }
-    .item-desc { font-size: 12px; color: var(--text-secondary); }
-    .pricing-summary {
-      margin-top: 16px;
-      margin-left: auto;
-      width: 280px;
-    }
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 16px;
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-    .summary-row.discount { color: var(--success); }
-    .summary-row.total {
-      background: var(--primary);
-      color: #fff;
-      font-size: 16px;
-      font-weight: 700;
-      border-radius: 8px;
-      margin-top: 8px;
-      padding: 12px 16px;
-    }
-
-    /* Team */
-    .team-grid { display: flex; flex-wrap: wrap; gap: 16px; }
-    .team-card {
-      display: flex;
-      gap: 14px;
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      width: calc(50% - 8px);
-      background: var(--bg-subtle);
-    }
-    .team-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--primary);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    .team-info { flex: 1; }
-    .team-name { font-weight: 600; font-size: 14px; color: var(--primary); }
-    .team-role { font-size: 12px; color: var(--accent); font-weight: 500; margin-top: 2px; }
-    .team-bio { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
-
-    /* Timeline */
-    .timeline { position: relative; padding-left: 32px; }
-    .timeline::before {
-      content: '';
-      position: absolute;
-      left: 7px;
-      top: 8px;
-      bottom: 8px;
-      width: 2px;
-      background: linear-gradient(to bottom, var(--accent), var(--primary));
-      border-radius: 1px;
-    }
-    .timeline-item {
-      position: relative;
-      padding-bottom: 24px;
-    }
-    .timeline-item:last-child { padding-bottom: 0; }
-    .timeline-dot {
-      position: absolute;
-      left: -29px;
-      top: 6px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid #fff;
-      box-shadow: 0 0 0 2px var(--accent);
-    }
-    .timeline-dot.last { background: var(--success); box-shadow: 0 0 0 2px var(--success); }
-    .timeline-phase { font-weight: 600; font-size: 15px; color: var(--primary); }
-    .timeline-duration { font-size: 12px; color: var(--accent); font-weight: 500; margin-top: 2px; }
-    .timeline-desc { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
-
-    /* Footer */
-    .pdf-footer {
-      margin-top: 60px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    @media print {
-      body { padding: 0; }
-      .cover-page { border-radius: 0; }
-      .section { page-break-inside: avoid; }
-    }
-  </style>
-</head>
-<body>
-  ${sectionHtml}
-  <div class="pdf-footer">
-    Generated with ProposalForge &middot; ${new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
-  </div>
-  <script>window.print()</script>
-</body>
-</html>`
 }

@@ -31,6 +31,7 @@ import { SectionCard } from "./section-card"
 import { AiToolbar } from "./ai-toolbar"
 import { useAutoSave } from "@/hooks/use-auto-save"
 import { toast } from "sonner"
+import { PdfDesignPicker } from "./pdf-design-picker"
 import type { SectionType } from "@/types"
 
 interface Section {
@@ -50,6 +51,8 @@ interface Proposal {
   status: string
   shareToken: string | null
   sections: Section[]
+  lastEditedBy?: string | null
+  lastEditedAt?: string | null
 }
 
 const sectionTypes: { type: SectionType; label: string }[] = [
@@ -60,6 +63,7 @@ const sectionTypes: { type: SectionType; label: string }[] = [
   { type: "TIMELINE", label: "Timeline" },
   { type: "TEAM", label: "Team" },
   { type: "TERMS", label: "Terms & Conditions" },
+  { type: "CONTACT", label: "Studio / Contact Details" },
   { type: "CUSTOM", label: "Custom Section" },
 ]
 
@@ -68,6 +72,7 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
   const [sections, setSections] = useState(initial.sections)
   const [saving, setSaving] = useState(false)
   const [activeSection, setActiveSection] = useState<string | null>(null)
+  const [showPdfPicker, setShowPdfPicker] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -147,7 +152,7 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
       const res = await fetch(`/api/proposals/${proposal.id}/sections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, title, content: type === "PRICING" ? { items: [], currency: "INR" } : type === "TIMELINE" ? { items: [] } : type === "TEAM" ? { members: [] } : { html: "" } }),
+        body: JSON.stringify({ type, title, content: type === "PRICING" ? { items: [], currency: "INR" } : type === "TIMELINE" ? { items: [] } : type === "TEAM" ? { members: [] } : type === "CONTACT" ? { studioName: "", services: "", email: "", phone: "", address: "", website: "", instagram: "" } : { html: "" } }),
       })
       const section = await res.json()
       setSections((prev) => [...prev, section])
@@ -183,8 +188,8 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
     triggerAutoSave()
   }
 
-  async function handleExportPdf() {
-    window.open(`/api/proposals/${proposal.id}/pdf`, "_blank")
+  function handleExportPdf() {
+    setShowPdfPicker(true)
   }
 
   async function handleShare() {
@@ -193,8 +198,15 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
     toast.success("Share link copied to clipboard")
   }
 
+  const recentEdit = initial.lastEditedAt && (Date.now() - new Date(initial.lastEditedAt).getTime()) < 5 * 60 * 1000
+
   return (
     <div className="space-y-4">
+      {recentEdit && initial.lastEditedBy && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
+          {initial.lastEditedBy} was editing this proposal recently. Changes may overlap.
+        </div>
+      )}
       <div className="flex items-center gap-3 flex-wrap">
         <Input
           value={proposal.title}
@@ -241,11 +253,7 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save
         </Button>
-        <Button variant="outline" size="sm" onClick={handleShare}>
-          <Share2 className="mr-2 h-4 w-4" />
-          Share
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleExportPdf}>
+<Button variant="outline" size="sm" onClick={handleExportPdf}>
           <Download className="mr-2 h-4 w-4" />
           PDF
         </Button>
@@ -314,6 +322,12 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
           />
         </div>
       </div>
+
+      <PdfDesignPicker
+        open={showPdfPicker}
+        onClose={() => setShowPdfPicker(false)}
+        proposalId={proposal.id}
+      />
     </div>
   )
 }

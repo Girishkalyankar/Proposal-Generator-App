@@ -80,7 +80,7 @@ export default function LandingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/25">
               <FileText className="h-4.5 w-4.5" />
             </div>
-            <span className="text-xl tracking-tight">ProposalForge</span>
+            <span className="text-xl tracking-tight">Propify.ai</span>
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" className="text-muted-foreground hover:text-foreground" asChild>
@@ -119,7 +119,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="animate-slide-up delay-200 mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-              ProposalForge is the AI-powered proposal builder that helps you
+              Propify.ai is the AI-powered proposal builder that helps you
               create professional, compelling proposals with drag-and-drop ease.
               Close more deals, faster.
             </p>
@@ -159,7 +159,7 @@ export default function LandingPage() {
               <span className="bg-gradient-to-r from-primary to-violet-500 bg-clip-text text-transparent"> close deals</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              From AI content generation to PDF export, ProposalForge handles the entire proposal workflow.
+              From AI content generation to PDF export, Propify.ai handles the entire proposal workflow.
             </p>
           </div>
 
@@ -212,10 +212,10 @@ export default function LandingPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <FileText className="h-3.5 w-3.5" />
             </div>
-            <span>ProposalForge</span>
+            <span>Propify.ai</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} ProposalForge. Built with Next.js, Tailwind, and AI.
+            &copy; {new Date().getFullYear()} Propify.ai. Built with Next.js, Tailwind, and AI.
           </p>
         </div>
       </footer>

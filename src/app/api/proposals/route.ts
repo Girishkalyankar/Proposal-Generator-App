@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getOwnerFilter, isUserActivated } from "@/lib/admin-filter"
 import { z } from "zod"
 
 const createSchema = z.object({
@@ -8,6 +9,7 @@ const createSchema = z.object({
   clientName: z.string().optional(),
   clientEmail: z.string().email().optional(),
   templateId: z.string().optional(),
+  duplicateId: z.string().optional(),
 })
 
 export async function GET() {
@@ -15,9 +17,13 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!(await isUserActivated(session.user.id))) {
+    return NextResponse.json({ error: "Account not activated" }, { status: 403 })
+  }
 
+  const ownerFilter = await getOwnerFilter(session.user.id)
   const proposals = await prisma.proposal.findMany({
-    where: { userId: session.user.id },
+    where: { ...ownerFilter, deletedAt: null },
     orderBy: { updatedAt: "desc" },
     include: { sections: { orderBy: { order: "asc" } } },
   })
@@ -30,6 +36,9 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!(await isUserActivated(session.user.id))) {
+    return NextResponse.json({ error: "Account not activated" }, { status: 403 })
+  }
 
   const body = await req.json()
   const parsed = createSchema.safeParse(body)
@@ -37,11 +46,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { title, clientName, clientEmail, templateId } = parsed.data
+  const { title, clientName, clientEmail, templateId, duplicateId } = parsed.data
+  const ownerFilter = await getOwnerFilter(session.user.id)
 
   let sections: { type: string; title: string; content: unknown; order: number }[] = []
 
-  if (templateId) {
+  if (duplicateId) {
+    const source = await prisma.proposal.findFirst({
+      where: { id: duplicateId, ...ownerFilter, deletedAt: null },
+      include: { sections: { orderBy: { order: "asc" } } },
+    })
+    if (source) {
+      sections = source.sections.map((s) => ({
+        type: s.type,
+        title: s.title,
+        content: s.content,
+        order: s.order,
+      }))
+    }
+  } else if (templateId) {
     const template = await prisma.template.findUnique({
       where: { id: templateId },
       include: { sections: { orderBy: { order: "asc" } } },

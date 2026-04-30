@@ -27,7 +27,7 @@ export function TemplatesList({ templates }: { templates: Template[] }) {
   const router = useRouter()
 
   async function deleteTemplate(id: string) {
-    if (!confirm("Delete this template?")) return
+    if (!confirm("Are you sure you want to delete this template?\n\nThis action cannot be undone.")) return
     await fetch(`/api/templates/${id}`, { method: "DELETE" })
     toast.success("Template deleted")
     router.refresh()

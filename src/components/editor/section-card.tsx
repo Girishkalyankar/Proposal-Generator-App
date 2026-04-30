@@ -16,6 +16,7 @@ const PricingSection = dynamic(() => import("./section-types/pricing-section").t
 const CoverSection = dynamic(() => import("./section-types/cover-section").then((m) => m.CoverSection), { ssr: false })
 const TimelineSection = dynamic(() => import("./section-types/timeline-section").then((m) => m.TimelineSection), { ssr: false })
 const TeamSection = dynamic(() => import("./section-types/team-section").then((m) => m.TeamSection), { ssr: false })
+const ContactSection = dynamic(() => import("./section-types/contact-section").then((m) => m.ContactSection), { ssr: false })
 
 interface Section {
   id: string
@@ -81,6 +82,13 @@ export function SectionCard({
       case "TEAM":
         return (
           <TeamSection
+            content={section.content}
+            onChange={(content) => onUpdate({ content })}
+          />
+        )
+      case "CONTACT":
+        return (
+          <ContactSection
             content={section.content}
             onChange={(content) => onUpdate({ content })}
           />

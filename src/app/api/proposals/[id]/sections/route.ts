@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getOwnerFilter, isUserActivated } from "@/lib/admin-filter"
 
 export async function PUT(
   req: NextRequest,
@@ -11,9 +12,13 @@ export async function PUT(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!(await isUserActivated(session.user.id))) {
+    return NextResponse.json({ error: "Account not activated" }, { status: 403 })
+  }
 
+  const ownerFilter = await getOwnerFilter(session.user.id)
   const proposal = await prisma.proposal.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, ...ownerFilter, deletedAt: null },
   })
   if (!proposal) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -25,7 +30,7 @@ export async function PUT(
     sections.map(
       (section: { id: string; title: string; content: unknown; order: number }) =>
         prisma.proposalSection.update({
-          where: { id: section.id },
+          where: { id: section.id, proposalId: id },
           data: {
             title: section.title,
             content: section.content as never,
@@ -52,9 +57,13 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!(await isUserActivated(session.user.id))) {
+    return NextResponse.json({ error: "Account not activated" }, { status: 403 })
+  }
 
+  const ownerFilter = await getOwnerFilter(session.user.id)
   const proposal = await prisma.proposal.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, ...ownerFilter, deletedAt: null },
     include: { sections: true },
   })
   if (!proposal) {
@@ -82,6 +91,9 @@ export async function DELETE(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (!(await isUserActivated(session.user.id))) {
+    return NextResponse.json({ error: "Account not activated" }, { status: 403 })
+  }
 
   const { sectionId } = await req.json()
 
@@ -90,7 +102,15 @@ export async function DELETE(req: NextRequest) {
     include: { proposal: true },
   })
 
-  if (!section || section.proposal.userId !== session.user.id) {
+  if (!section || section.proposal.deletedAt) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
+  const ownerFilter = await getOwnerFilter(session.user.id)
+  const hasAccess = await prisma.proposal.findFirst({
+    where: { id: section.proposalId, ...ownerFilter },
+  })
+  if (!hasAccess) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 

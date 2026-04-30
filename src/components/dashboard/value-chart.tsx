@@ -34,11 +34,11 @@ export function ValueChart({ proposals }: ValueChartProps) {
     )
   }
 
-  let cumulative = 0
-  const cumulativeData = data.map((d) => {
-    cumulative += d.value
-    return { ...d, cumulative }
-  })
+  const cumulativeData = data.reduce<(typeof data[number] & { cumulative: number })[]>((acc, d) => {
+    const prev = acc.length > 0 ? acc[acc.length - 1].cumulative : 0
+    acc.push({ ...d, cumulative: prev + d.value })
+    return acc
+  }, [])
 
   return (
     <ResponsiveContainer width="100%" height={260}>

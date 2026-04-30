@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
+import { rateLimit } from "@/lib/rate-limit"
+import { isUserActivated } from "@/lib/admin-filter"
 import Anthropic from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 import { GoogleGenerativeAI } from "@google/generative-ai"
@@ -157,6 +159,14 @@ export async function POST(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 })
   }
 
+  if (!(await isUserActivated(session.user.id))) {
+    return new Response("Account not activated", { status: 403 })
+  }
+
+  if (!rateLimit(`ai:${session.user.id}`, 20, 60_000)) {
+    return new Response("Too many requests. Please wait a minute.", { status: 429 })
+  }
+
   const { sectionType, tone, context, existingContent, action, provider } = await req.json()
 
   const userPrompt = buildUserPrompt(sectionType, tone, context, existingContent || "", action)
@@ -192,7 +202,13 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "AI generation failed"
-    return new Response(message, { status: 500 })
+    const msg = error instanceof Error ? error.message : ""
+    if (msg.includes("rate_limit") || msg.includes("429") || msg.includes("quota")) {
+      return new Response("AI credits exhausted. Please try again later or switch to a different AI provider.", { status: 429 })
+    }
+    if (msg.includes("401") || msg.includes("authentication") || msg.includes("invalid_api_key")) {
+      return new Response("AI API key is invalid or expired. Contact admin.", { status: 500 })
+    }
+    return new Response(msg || "AI generation failed. Please try again.", { status: 500 })
   }
 }

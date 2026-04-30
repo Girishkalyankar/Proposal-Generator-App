@@ -9,6 +9,7 @@ export type SectionType =
   | "TIMELINE"
   | "TEAM"
   | "TERMS"
+  | "CONTACT"
   | "CUSTOM"
 
 export interface PricingItem {

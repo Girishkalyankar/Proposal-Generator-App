@@ -75,13 +75,13 @@ async function main() {
 
     // Create a system user for public templates if needed
     let systemUser = await prisma.user.findFirst({
-      where: { email: "system@proposalforge.app" },
+      where: { email: "system@propify.ai" },
     })
     if (!systemUser) {
       systemUser = await prisma.user.create({
         data: {
-          email: "system@proposalforge.app",
-          name: "ProposalForge",
+          email: "system@propify.ai",
+          name: "Propify.ai",
         },
       })
     }
