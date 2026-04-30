@@ -1,37 +1,17 @@
 import { auth } from "@/lib/auth"
+import { NextResponse } from "next/server"
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
   const path = req.nextUrl.pathname
-  const isAuthPage = path.startsWith("/login") || path.startsWith("/signup")
-  const isActivatePage = path.startsWith("/activate")
-  const isPublicPage =
-    path === "/" ||
-    path.startsWith("/view/") ||
-    path.startsWith("/api/auth") ||
-    path.startsWith("/api/activate")
-
-  if (isPublicPage) return
-
-  if (isActivatePage) {
-    if (!isLoggedIn) {
-      return Response.redirect(new URL("/login", req.nextUrl))
-    }
-    return
-  }
-
-  if (isAuthPage) {
-    if (isLoggedIn) {
-      return Response.redirect(new URL("/dashboard", req.nextUrl))
-    }
-    return
-  }
 
   if (!isLoggedIn) {
-    return Response.redirect(new URL("/login", req.nextUrl))
+    return NextResponse.redirect(new URL("/login", req.nextUrl))
   }
+
+  return NextResponse.next()
 })
 
 export const config = {
-  matcher: ["/((?!_next|static|favicon\\.ico|.*\\.svg$|.*\\.png$|.*\\.jpg$|api/ai).*)"],
+  matcher: ["/dashboard/:path*", "/proposals/:path*", "/templates/:path*", "/settings/:path*", "/admin/:path*"],
 }
