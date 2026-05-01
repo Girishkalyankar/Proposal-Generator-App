@@ -1,8 +1,6 @@
 "use client"
 
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -21,7 +19,7 @@ export function ValueChart({ proposals }: ValueChartProps) {
     .filter((p) => p.totalValue && Number(p.totalValue) > 0)
     .slice(0, 10)
     .reverse()
-    .map((p, i) => ({
+    .map((p) => ({
       name: p.clientName || p.title.slice(0, 15),
       value: Number(p.totalValue),
     }))

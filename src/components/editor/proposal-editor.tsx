@@ -18,7 +18,6 @@ import {
 } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Save, Send, Download, Share2, Loader2, CheckCircle2, XCircle, Eye, FileEdit, ChevronDown } from "lucide-react"
+import { Plus, Save, Send, Download, Loader2, CheckCircle2, XCircle, Eye, FileEdit } from "lucide-react"
 import { SectionCard } from "./section-card"
 import { AiToolbar } from "./ai-toolbar"
 import { useAutoSave } from "@/hooks/use-auto-save"
@@ -79,7 +78,7 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  function computeTotalValue() {
+  const computeTotalValue = useCallback(() => {
     return sections
       .filter((s) => s.type === "PRICING")
       .reduce((total, s) => {
@@ -90,7 +89,7 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
         const afterDiscount = subtotal - subtotal * (discount / 100)
         return total + afterDiscount + afterDiscount * (taxRate / 100)
       }, 0)
-  }
+  }, [sections])
 
   async function changeStatus(newStatus: string) {
     setProposal((p) => ({ ...p, status: newStatus }))
@@ -136,7 +135,7 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
     } finally {
       setSaving(false)
     }
-  }, [proposal, sections])
+  }, [proposal, sections, computeTotalValue])
 
   const triggerAutoSave = useAutoSave(save)
 
@@ -192,13 +191,8 @@ export function ProposalEditor({ proposal: initial }: { proposal: Proposal }) {
     setShowPdfPicker(true)
   }
 
-  async function handleShare() {
-    const url = `${window.location.origin}/view/${proposal.shareToken}`
-    await navigator.clipboard.writeText(url)
-    toast.success("Share link copied to clipboard")
-  }
-
-  const recentEdit = initial.lastEditedAt && (Date.now() - new Date(initial.lastEditedAt).getTime()) < 5 * 60 * 1000
+  const [now] = useState(() => Date.now())
+  const recentEdit = initial.lastEditedAt && (now - new Date(initial.lastEditedAt).getTime()) < 5 * 60 * 1000
 
   return (
     <div className="space-y-4">

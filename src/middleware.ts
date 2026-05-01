@@ -3,7 +3,6 @@ import { NextResponse } from "next/server"
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const path = req.nextUrl.pathname
 
   if (!isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.nextUrl))

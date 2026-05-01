@@ -9,7 +9,6 @@ import {
   MoreHorizontal,
   Trash2,
   Copy,
-  Send,
   ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"

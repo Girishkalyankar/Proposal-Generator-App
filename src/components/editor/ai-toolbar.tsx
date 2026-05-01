@@ -22,7 +22,6 @@ interface Section {
 }
 
 export function AiToolbar({
-  proposalId,
   activeSection,
   context,
   onContentGenerated,
