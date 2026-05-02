@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getOwnerFilter, isUserActivated } from "@/lib/admin-filter"
+import { nanoid } from "nanoid"
 import { z } from "zod"
 
 const createSchema = z.object({
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
       title,
       clientName,
       clientEmail,
+      shareToken: nanoid(8),
       userId: session.user.id,
       sections: {
         create: sections.map((s) => ({
