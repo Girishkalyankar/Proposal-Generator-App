@@ -39,6 +39,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
+    async signIn() {
+      return true
+    },
     jwt({ token, user }) {
       if (user) {
         token.id = user.id
@@ -50,6 +53,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string
       }
       return session
+    },
+    redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      if (url.startsWith(baseUrl)) return url
+      return `${baseUrl}/dashboard`
     },
   },
 })
