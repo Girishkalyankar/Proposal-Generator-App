@@ -5,6 +5,21 @@ import { Topbar } from "@/components/layout/topbar"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+async function getUser(userId: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isActivated: true, isAdmin: true },
+      })
+    } catch {
+      if (attempt === 2) return null
+      await new Promise((r) => setTimeout(r, 1000))
+    }
+  }
+  return null
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -13,10 +28,7 @@ export default async function DashboardLayout({
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { isActivated: true, isAdmin: true },
-  })
+  const user = await getUser(session.user.id)
 
   if (!user?.isActivated && !user?.isAdmin) redirect("/activate")
 
