@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Propify.ai — Complete App Profile</title>
+<style>
+body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; line-height: 1.6; }
+h1 { color: #7c3aed; border-bottom: 3px solid #7c3aed; padding-bottom: 10px; }
+h2 { color: #4c1d95; margin-top: 30px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+th, td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; }
+th { background: #7c3aed; color: white; }
+tr:nth-child(even) { background: #f9fafb; }
+ul { padding-left: 20px; }
+li { margin: 5px 0; }
+pre { background: #f3f4f6; padding: 15px; border-radius: 8px; overflow-x: auto; }
+.badge { display: inline-block; background: #7c3aed; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 25px 0; }
+@media print { body { padding: 20px; } h1 { font-size: 22px; } h2 { font-size: 16px; } }
+</style>
+</head>
+<body>
+
+<h1>Propify.ai — Complete App Profile</h1>
+
+<h2>Identity</h2>
+<ul>
+<li><strong>Name:</strong> Propify.ai</li>
+<li><strong>Tagline:</strong> AI THAT SEALS THE DEAL</li>
+<li><strong>Type:</strong> SaaS Proposal Generator (Web 2.0)</li>
+<li><strong>Live URL:</strong> https://propify-ai.netlify.app</li>
+<li><strong>GitHub:</strong> https://github.com/Girishkalyankar/Proposal-Generator-App</li>
+</ul>
+
+<hr>
+
+<h2>Tech Stack</h2>
+<table>
+<tr><th>Layer</th><th>Technology</th></tr>
+<tr><td>Framework</td><td>Next.js 15 (App Router)</td></tr>
+<tr><td>Language</td><td>TypeScript</td></tr>
+<tr><td>Styling</td><td>Tailwind CSS + shadcn/ui</td></tr>
+<tr><td>Database</td><td>PostgreSQL (Neon, us-east-1)</td></tr>
+<tr><td>ORM</td><td>Prisma</td></tr>
+<tr><td>Auth</td><td>NextAuth v5 (JWT strategy)</td></tr>
+<tr><td>AI</td><td>Groq API</td></tr>
+<tr><td>Drag &amp; Drop</td><td>dnd-kit</td></tr>
+<tr><td>Rich Text</td><td>Tiptap</td></tr>
+<tr><td>Charts</td><td>Recharts</td></tr>
+<tr><td>XSS Protection</td><td>isomorphic-dompurify</td></tr>
+<tr><td>Hosting</td><td>Netlify (serverless functions)</td></tr>
+<tr><td>Version Control</td><td>GitHub (auto-deploy on push to main)</td></tr>
+</table>
+
+<hr>
+
+<h2>Features</h2>
+<ul>
+<li>Google OAuth + Email/Password login</li>
+<li>Pincode-gated account activation (monetization)</li>
+<li>Drag-and-drop proposal editor with auto-save</li>
+<li>AI content generation (multiple tones)</li>
+<li>Dynamic pricing tables (qty × price, discount, tax, auto-totals)</li>
+<li>Template library (save/load/clone)</li>
+<li>PDF export &amp; download</li>
+<li>Shareable public proposal links (short 8-char tokens)</li>
+<li>Email proposals to clients</li>
+<li>Proposal status tracking (Draft → Sent → Viewed → Accepted/Declined)</li>
+<li>Dashboard with stats, win rate, value charts</li>
+<li>Dark/light mode</li>
+<li>PWA (installable on phone/desktop)</li>
+<li>Admin panel for access code management</li>
+<li>Responsive design</li>
+</ul>
+
+<hr>
+
+<h2>Security (21 vulnerabilities fixed)</h2>
+<ul>
+<li>Rate limiting on all sensitive endpoints</li>
+<li>XSS sanitization (DOMPurify)</li>
+<li>Input validation (Zod schemas)</li>
+<li>Ownership checks on all resources</li>
+<li>Secure token generation (crypto.randomBytes)</li>
+<li>CSRF protection (NextAuth built-in)</li>
+<li>Email enumeration prevention</li>
+<li>SQL injection prevention (Prisma parameterized queries)</li>
+</ul>
+
+<hr>
+
+<h2>Accounts &amp; Roles</h2>
+<table>
+<tr><th>Email</th><th>Role</th></tr>
+<tr><td>gk.sacchidanand@gmail.com</td><td>Admin</td></tr>
+<tr><td>girish.kalyankar@gmail.com</td><td>Admin</td></tr>
+<tr><td>shraddha.sacchith@gmail.com</td><td>Regular user</td></tr>
+</table>
+<ul>
+<li><strong>Admins:</strong> Share all proposal/template data, manage access codes at /admin/codes</li>
+<li><strong>Regular users:</strong> See only their own data, need access code to activate</li>
+</ul>
+
+<hr>
+
+<h2>Deployment</h2>
+<ul>
+<li><strong>Platform:</strong> Netlify</li>
+<li><strong>Build:</strong> Auto-deploy from GitHub main branch</li>
+<li><strong>SSL Certificate:</strong> Auto-provisioned by Netlify (Let's Encrypt)</li>
+<li><strong>Domain:</strong> propify-ai.netlify.app (Netlify subdomain)</li>
+<li><strong>CDN:</strong> Netlify Edge (static assets cached)</li>
+<li><strong>Serverless Functions:</strong> All API routes run as Netlify Functions</li>
+<li><strong>Environment Variables:</strong> AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, DATABASE_URL, GROQ_API_KEY</li>
+</ul>
+
+<hr>
+
+<h2>Database (Neon)</h2>
+<ul>
+<li><strong>Provider:</strong> Neon PostgreSQL (free tier)</li>
+<li><strong>Region:</strong> us-east-1</li>
+<li><strong>Database:</strong> neondb</li>
+<li><strong>Tables:</strong> User, Account, Session, VerificationToken, Proposal, ProposalSection, Template, TemplateSection, AccessCode</li>
+</ul>
+
+<hr>
+
+<h2>Architecture</h2>
+<pre>
+Browser (PWA)
+    ↓ HTTPS
+Netlify CDN (static assets)
+    ↓
+Netlify Functions (API routes)
+    ↓
+Neon PostgreSQL (data)
+    ↓
+Groq API (AI generation)
+</pre>
+
+<hr>
+
+<h2>Performance Notes</h2>
+<ul>
+<li>Neon free tier has cold starts (2-5s after 5min idle)</li>
+<li>Retry logic added on public view page + dashboard layout</li>
+<li>Loading skeletons on all pages</li>
+<li>CDN caching for static assets</li>
+</ul>
+
+<hr>
+
+<h2>Monetization Model</h2>
+<ul>
+<li>Access codes generated by admin</li>
+<li>Users must enter a valid code to activate account</li>
+<li>Codes are single-use, revocable</li>
+<li>Admin controls all distribution</li>
+</ul>
+
+<hr>
+
+<h2>PWA Details</h2>
+<ul>
+<li><strong>Service Worker:</strong> public/sw.js (cache name: propify-v1)</li>
+<li><strong>Manifest:</strong> public/manifest.json</li>
+<li><strong>Installable:</strong> Yes (Android + iOS + Desktop)</li>
+<li><strong>Offline:</strong> Basic shell cached</li>
+</ul>
+
+<hr>
+
+<h2>Logo</h2>
+<ul>
+<li>Purple document icon with yellow lightning bolt (top-left corner)</li>
+<li>Text: "PROPIFY" in purple, ".AI" in purple</li>
+<li>Located at public/logo.svg</li>
+</ul>
+
+<hr>
+
+<h2>Owner</h2>
+<ul>
+<li><strong>Built by:</strong> Girish Kalyankar</li>
+<li><strong>Business:</strong> Girish SAAS Technology</li>
+<li><strong>Contact:</strong> girish.kalyankar@hotmail.com</li>
+</ul>
+
+</body>
+</html>
