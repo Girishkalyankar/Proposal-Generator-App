@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { redis } from "@/lib/redis"
 import { getOwnerFilter, isUserActivated } from "@/lib/admin-filter"
 
 export async function GET(
@@ -73,6 +74,8 @@ export async function PATCH(
     },
     include: { sections: { orderBy: { order: "asc" } } },
   })
+
+  await redis.del(`dashboard:${session.user.id}`)
 
   return NextResponse.json(updated)
 }
