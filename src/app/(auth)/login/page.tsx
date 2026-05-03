@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { signIn } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,10 +12,31 @@ import { FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState<string | null>(null)
+
+  useEffect(() => {
+    const authError = searchParams.get("error")
+    if (authError) {
+      const messages: Record<string, string> = {
+        OAuthAccountNotLinked: "This email is already registered with a different sign-in method.",
+        OAuthCallbackError: "Google sign-in failed. Please try again.",
+        Default: "Sign-in failed. Please try again.",
+      }
+      setError(messages[authError] || messages.Default)
+    }
+  }, [searchParams])
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault()
