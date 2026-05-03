@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, Suspense } from "react"
 import { signIn } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -21,22 +21,14 @@ export default function LoginPage() {
 
 function LoginForm() {
   const searchParams = useSearchParams()
+  const authError = searchParams.get("error")
+  const initialError = authError
+    ? ({ OAuthAccountNotLinked: "This email is already registered with a different sign-in method.", OAuthCallbackError: "Google sign-in failed. Please try again." }[authError] || "Sign-in failed. Please try again.")
+    : ""
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState(initialError)
   const [loading, setLoading] = useState<string | null>(null)
-
-  useEffect(() => {
-    const authError = searchParams.get("error")
-    if (authError) {
-      const messages: Record<string, string> = {
-        OAuthAccountNotLinked: "This email is already registered with a different sign-in method.",
-        OAuthCallbackError: "Google sign-in failed. Please try again.",
-        Default: "Sign-in failed. Please try again.",
-      }
-      setError(messages[authError] || messages.Default)
-    }
-  }, [searchParams])
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault()
